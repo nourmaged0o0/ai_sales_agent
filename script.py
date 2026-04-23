@@ -5,10 +5,18 @@ from dotenv import load_dotenv
 from langchain.tools import tool
 from langchain_groq import ChatGroq
 from langchain.agents import create_agent
+from langchain_core.callbacks import BaseCallbackHandler
 
 load_dotenv()
 
-
+class TokenTrackerCallback(BaseCallbackHandler):
+    def on_llm_end(self, response, **kwargs):
+        if response.llm_output and "token_usage" in response.llm_output:
+            usage = response.llm_output["token_usage"]
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            comp_tokens = usage.get("completion_tokens", 0)
+            total_tokens = usage.get("total_tokens", 0)
+            print(f"\n📊 [Token Tracker] Agent Thinking Step -> Prompt: {prompt_tokens} | Generated: {comp_tokens} | Total Step Tokens: {total_tokens}")
 
 #tools
 
@@ -112,4 +120,4 @@ if __name__ == "__main__":
         "messages": [
             {"role": "user", "content": "Start the WhatsApp outreach campaign for all pending leads in the database."}
         ]
-    })
+    }, config={"callbacks": [TokenTrackerCallback()]})
