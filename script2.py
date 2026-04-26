@@ -3,6 +3,8 @@ import sqlite3
 import requests
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 
@@ -68,7 +70,20 @@ def update_lead_status(phone, status):
     conn.close()
 
 if __name__ == "__main__":
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.4)
+    # llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.4)
+#     llm = ChatOpenAI(
+#     # openai_api_key=os.getenv("openai_api_key"),
+#     openai_api_base="https://openrouter.ai/api/v1", 
+#     model="inclusionai/ling-2.6-1t:free", 
+#     temperature=0.3,
+# )
+    # llm = ChatOpenAI(
+    #     api_key=os.getenv("SILICONFLOW_API_KEY"), 
+    #     base_url="https://api.siliconflow.com/v1", # الرابط اللي إنت جبته من الـ Docs
+    #     model="Qwen/Qwen3-VL-32B-Instruct",       # الموديل الفري السريع
+    #     temperature=0.3,
+    # )
     leads = get_pending_leads()
 
     for lead in leads:
@@ -80,12 +95,16 @@ if __name__ == "__main__":
 
         if template:
             print(f"Cache HIT: Skipping LLM for '{interest}'")
-            final_message = template.replace("[الاسم]", name)
+            final_message = template.replace("[NAME]", name)
         else:
             print(f"Cache MISS: Calling LLM for '{interest}'")
-            prompt = f"""أنت موظف مبيعات مصري تتحدث باللهجةالمصرية. قم بتأليف قالب رسالة واتساب واحدة قصيرة وودية باللهجة المصرية الطبيعيه جدا لشخص مهتم بـ '{interest}'.
-            يجب أن تحتوي الرسالة على الكلمة '[الاسم]' حرفياً كعنصر نائب ليتم استبدالها لاحقاً باسم العميل.
-            ممنوع كتابة أي لغة إنجليزية. اكتب الرسالة فقط بدون أي مقدمات أو شروحات إضافية."""
+            prompt = f"""أنت بائع مصري محترف تكتب رسالة واتساب لعميل مهتم بـ '{interest}'.
+            اكتب رسالة واحدة فقط (سطرين كحد أقصى) والتزم بهذه الشروط الإجبارية حرفياً:
+            1. ابدأ الرسالة بـ "اهلا يا [NAME]" (اكتب كلمة اهلا بدون همزات، واكتب [NAME] كما هي بالأقواس المربعة).
+            2. ممنوع منعاً باتاً استخدام كلمات فصحى مثل "مرحبا" أو "كيف حالك". استخدم لهجة شات مصرية دارجة وطبيعية 100%.
+            3. ممنوع منعاً باتاً وضع فواصل (،) أو نقاط (.) في وسط الجمل أو في نهاية السطور.
+            4. ممنوع كتابة أي كلمة باللغة الإنجليزية باستثناء [NAME] فقط.
+            5. أخرج نص الرسالة فقط لا غير، بدون أي مقدمات أو خيارات أو شروحات."""
             
             response = llm.invoke(prompt)
             template = response.content.strip()
@@ -93,7 +112,7 @@ if __name__ == "__main__":
             if usage:
                 print(f"📊 [Tokens Billed] Prompt: {usage['input_tokens']} | Generated: {usage['output_tokens']} | Total: {usage['total_tokens']}")
             save_interest_cache(interest, template)
-            final_message = template.replace("[الاسم]", name)
+            final_message = template.replace("[NAME]", name)
 
         success = send_whatsapp_message(phone, final_message)
         status = "reached" if success else "couldn't reach"
