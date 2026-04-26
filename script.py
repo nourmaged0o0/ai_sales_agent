@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from langchain_openai import ChatOpenAI
 import requests
 from dotenv import load_dotenv
 from langchain.tools import tool
@@ -91,6 +92,12 @@ def update_lead_status(phone: str, status: str):
 
 tools = [get_pending_leads, send_whatsapp_message, update_lead_status]
 llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
+# llm = ChatOpenAI(
+#         api_key=os.getenv("SILICONFLOW_API_KEY"), 
+#         base_url="https://api.siliconflow.com/v1", 
+#         model="Qwen/Qwen3-VL-32B-Instruct",       
+#         temperature=0.3,
+#     )
 system_prompt = """
 أنت موظف مبيعات مصري ذكي واحترافي.
 مهمتك الأساسية والوحيدة هي التواصل مع العملاء عبر الواتساب **باللهجة المصرية الطبيعية جداً**.
